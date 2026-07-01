@@ -1,0 +1,45 @@
+# PowerShell
+*.ps1proj
+*.psd1
+*.psm1
+*.pssc
+*.sr.ps1
+*.ss.ps1
+*.tmp.ps1
+*-Debug.ps1
+Debug-*.ps1
+Out-*.ps1
+
+# Logs
+*.log
+CvadBackups/
+ScriptLog/
+
+# Backup-Dateien (generiert)
+**/ZoneMapping.yml
+
+# .NET / Visual Studio
+*.user
+*.suo
+*.sln.docstates
+*.vs/
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+
+# Windows / macOS
+Thumbs.db
+.DS_Store
+
+# IDE
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Sonstiges
+*.bak
+*.old
+*.orig

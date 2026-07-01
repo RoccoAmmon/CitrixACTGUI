@@ -20,6 +20,10 @@ Graphische Oberfläche (WPF) für **Backup & Restore** einer **Citrix CVAD** (On
 
 Das Skript ist als **Single-File-PowerShell-Skript** konzipiert – die gesamte GUI (XAML) ist direkt eingebettet. Keine zusätzlichen Dateien nötig.
 
+> 🧪 **Cloud-Modus (Citrix DaaS):** Die Cloud-Funktion wurde bislang **nicht abschließend getestet**.  
+> Wenn du das Tool in einer Cloud-Umgebung testen möchtest, freue ich mich über **Rückmeldung** oder einen **Issue** auf GitHub!  
+> [→ Neuen Issue öffnen](https://github.com/RoccoAmmon/CitrixACTGUI/issues/new)
+
 ---
 
 ## Features
@@ -98,6 +102,9 @@ C:\Users\[Username]\Documents\Citrix\AutoConfig\CustomerInfo.yml
 Die generierte Datei enthält automatisch alle erforderlichen Felder (Environment, Locale, LogTransactions, uvm.) im korrekten YAML-Format.
 
 > ⚠️ **Validierung:** Zu kurze oder ungültig aussehende Credentials lösen eine Warnung aus, die bestätigt werden muss.
+>
+> 🧪 **Hinweis:** Die Cloud-Funktion ist implementiert, aber nicht umfassend getestet.  
+> Bei Problemen bitte ein [Issue auf GitHub](https://github.com/RoccoAmmon/CitrixACTGUI/issues/new) öffnen.
 
 ### 3) Backup-Ordner & Komponenten
 - **Ordner** – Basisverzeichnis für Backups (Standard: `C:\CvadBackups`)

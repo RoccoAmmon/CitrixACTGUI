@@ -1,6 +1,6 @@
 # CVAD ACT Backup & Restore Manager
 
-![Version](https://img.shields.io/badge/Version-1.0.0-1D4ED8?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.1.0-1D4ED8?style=for-the-badge)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.0%2B-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
 ![Citrix ACT](https://img.shields.io/badge/Citrix%20ACT-3.0.122.0-00A1E0?style=for-the-badge&logo=citrix&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
@@ -9,6 +9,7 @@
 
 **Autor:** Rocco Ammon  
 **Stand:** 01.07.2026  
+**Version:** 1.1.0  
 **Sprache:** PowerShell 5.0+ / WPF (.NET)
 
 ---
@@ -19,8 +20,6 @@ Graphische Oberfläche (WPF) für **Backup & Restore** einer **Citrix CVAD** (On
 
 Das Skript ist als **Single-File-PowerShell-Skript** konzipiert – die gesamte GUI (XAML) ist direkt eingebettet. Keine zusätzlichen Dateien nötig.
 
-> ⚠️ **Hinweis:** Der **Cloud-Modus** (Citrix DaaS) ist implementiert, aber bislang **nicht getestet**. OnPrem (Citrix CVAD) wurde vollständig geprüft und funktioniert.
-
 ---
 
 ## Features
@@ -29,6 +28,9 @@ Das Skript ist als **Single-File-PowerShell-Skript** konzipiert – die gesamte 
 - **Restore** – einzelne Komponenten aus einem Backup gezielt wiederherstellen
 - **CheckMode (Trockenlauf)** – Änderungen nur anzeigen, ohne sie anzuwenden
 - **OnPrem & Cloud** – unterstützt beide Umgebungen (automatische Parametererkennung)
+- **Cloud-Anmeldung** – GUI-Eingabefelder für Customer ID, Client ID und Secret
+- **Cloud-Validierung** – Prüfung der Anmeldedaten vor Ausführung (Warnung bei ungültigen Werten)
+- **Auto-Konfiguration** – automatisches Schreiben der `CustomerInfo.yml` mit vollständiger YAML-Struktur
 - **Auto-Detection** – erkennt automatisch, welche Komponenten im Backup-Ordner vorhanden sind
 - **Zone Mapping** – automatische Generierung der `ZoneMapping.yml` aus der `Zone.yml`
 - **Selektive Komponentenauswahl** – 20 Komponenten als CheckBoxen, via UniformGrid mit 5 Spalten
@@ -80,7 +82,22 @@ Das Skript ist als **Single-File-PowerShell-Skript** konzipiert – die gesamte 
 
 ### 2) Umgebung
 - **OnPrem** – für lokale Citrix CVAD-Installationen (keine DDC-Angabe nötig, arbeitet immer lokal)
-- **Cloud** – für Citrix DaaS (Citrix Cloud). Sucht automatisch nach der `CustomerInfo.yml`.
+- **Cloud** – für Citrix DaaS (Citrix Cloud). Zeigt Eingabefelder für Customer ID, Client ID und Secret an.
+
+### 3) Cloud-Anmeldung (nur Cloud-Modus)
+Sobald „Cloud“ ausgewählt wird, erscheint eine GroupBox mit drei Eingabefeldern:
+- **Customer ID** – Ihre Citrix Cloud-Kundennummer (z. B. `markhof123`)
+- **Client ID** – UUID des Secure Clients (Format: `XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`)
+- **Secret** – geheimer Schlüssel des Secure Clients (verschlüsselter String, 20+ Zeichen)
+
+Beim Klick auf **Ausführen** werden die Daten validiert und automatisch in die `CustomerInfo.yml` geschrieben:
+```
+C:\Users\[Username]\Documents\Citrix\AutoConfig\CustomerInfo.yml
+```
+
+Die generierte Datei enthält automatisch alle erforderlichen Felder (Environment, Locale, LogTransactions, uvm.) im korrekten YAML-Format.
+
+> ⚠️ **Validierung:** Zu kurze oder ungültig aussehende Credentials lösen eine Warnung aus, die bestätigt werden muss.
 
 ### 3) Backup-Ordner & Komponenten
 - **Ordner** – Basisverzeichnis für Backups (Standard: `C:\CvadBackups`)
@@ -157,7 +174,8 @@ Die generierte Datei wird im Backup-Ordner gespeichert.
 | Problem | Ursache / Lösung |
 |---|---|
 | **„Import-CvadAcToSite nicht gefunden“** | ACT ist nicht installiert oder das PowerShell-SnapIn nicht geladen. ACT installieren und PowerShell neu starten. |
-| **„CustomerInfo.yml nicht gefunden“** | Im Cloud-Modus muss die `CustomerInfo.yml` im Benutzerprofil liegen. |
+| **„CustomerInfo.yml nicht gefunden“** | Im Cloud-Modus muss die `CustomerInfo.yml` im Benutzerprofil liegen. Wird automatisch aus den GUI-Eingabefeldern generiert. |
+| **Bearertoken-Fehler (Cloud)** | Ungültige Customer ID, Client ID oder Secret. Credentials im Citrix Cloud Admin Portal prüfen. Siehe Abschnitt **Cloud-Anmeldung**. |
 | **Restore macht keine Änderungen** | Prüfen, ob die richtigen Komponenten angehakt sind und ob `CheckMode` deaktiviert ist. |
 | **Zone.yml nicht gefunden** | Das Backup enthält keine Zonen-Komponente. Zone Mapping ist dann nicht nötig. |
 | **Umlaute werden falsch dargestellt** | Encoding-Problem – die Dateien werden jetzt automatisch als UTF-8 ohne BOM gespeichert. |

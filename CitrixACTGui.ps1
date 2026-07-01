@@ -5,7 +5,10 @@
 
 .DESCRIPTION
     - Backup / Restore wählbar, optionaler Trockenlauf (CheckMode)
-    - Umgebung über -Environment (OnPrem/Cloud); OnPrem setzt IMMER AdminAddress
+    - Umgebung: OnPrem oder Cloud (Citrix DaaS)
+    - Cloud: Eingabe von Customer ID, Client ID, Secret über GUI-Felder
+    - Cloud: Automatische Generierung der CustomerInfo.yml
+    - Cloud: Validierung der Anmeldedaten vor Ausführung
     - Ordnerbasiertes .yml-Konzept des ACT
     - DisplayLog=$false -> kein blockierendes Notepad
     - SYNCHRONE Ausführung mit Stream-Capture -> ACT-Ausgabe landet im GUI-Log
@@ -14,7 +17,7 @@
 
 .NOTES
     Autor   : Rocco Ammon
-    Version : 1.0.0 (synchron + Log-Capture, SnapIn-kompatibel)
+    Version : 1.1.0 (Cloud-Anmeldung + Credentials-Validierung)
     Stand   : 01.07.2026
 #>
 
@@ -104,6 +107,7 @@ function Test-OverallSuccess {
             return $true
         }
         Write-Log "$Aktion meldet Overall_Success = FALSE (Teil-/Gesamtfehler!)." 'ERROR'
+        Write-Log "⚠️ Fehlerdetails in der ACT History.log prüfen! Diese befindet sich im Backup-Ordner." 'WARN'
         return $false
     }
     Write-Log "$Aktion lieferte kein Overall_Success-Feld – als erfolgreich gewertet." 'WARN'
@@ -208,13 +212,14 @@ Add-Type -AssemblyName WindowsBase
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Margin="0,0,0,6">
             <Run Text="CVAD ACT – Backup &amp; Restore" Foreground="#FF1D4ED8" FontSize="18" FontWeight="Bold"/>
-            <Run Text="   v1.0.0" Foreground="#FF6B7280" FontSize="12" FontWeight="Normal" BaselineAlignment="Bottom"/>
+            <Run Text="   v1.1.0" Foreground="#FF6B7280" FontSize="12" FontWeight="Normal" BaselineAlignment="Bottom"/>
         </TextBlock>
 
         <Grid Grid.Row="1">
@@ -234,7 +239,39 @@ Add-Type -AssemblyName WindowsBase
             </GroupBox>
         </Grid>
 
-        <GroupBox Grid.Row="2" Header="3) Backup-Ordner &amp; Komponenten">
+        <GroupBox Grid.Row="2" Header="Cloud-Anmeldung" x:Name="grpCloudCreds" Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Foreground="#FF666666" FontSize="11" Margin="0,0,0,6" TextWrapping="Wrap">
+                    Geben Sie Ihre echten Citrix Cloud-Anmeldedaten ein. Diese werden automatisch in C:\Users\[Username]\Documents\Citrix\AutoConfig\CustomerInfo.yml gespeichert.
+                </TextBlock>
+                <Label Content="Customer ID:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtCustomerId" Grid.Row="1" Grid.Column="1" Height="24" VerticalContentAlignment="Center" Margin="4" ToolTip="z.B. markhof123 oder eine längere Kundennummer"/>
+                <Label Content="Client ID:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"/>
+                <TextBox x:Name="txtClientId" Grid.Row="2" Grid.Column="1" Height="24" VerticalContentAlignment="Center" Margin="4" ToolTip="Format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX (UUID)"/>
+                <Label Content="Secret:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center"/>
+                <PasswordBox x:Name="pwdSecret" Grid.Row="3" Grid.Column="1" Height="24" Margin="4" ToolTip="Verschlüsselter String (20+ Zeichen)"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Foreground="#FF1D4ED8" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap">
+                    💡 Tipp: Validierung überprüft die Daten vor dem Senden. Ungültige Credentials führen zu Authentifizierungsfehlern.
+                </TextBlock>
+                <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Foreground="#FFDC2626" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap">
+                    ⚠️ Häufige Fehlerursachen:
+                    • Credentials sind Test-Daten (zu kurz, zu einfach)
+                    • Firewall blockiert Zugriff auf *.xendesktop.net und *.cloud.com
+                    • Customer ID, Client ID oder Secret kopiert falsch
+                </TextBlock>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Grid.Row="3" Header="3) Backup-Ordner &amp; Komponenten">
             <StackPanel>
                 <Grid Margin="0,0,0,4">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -261,13 +298,13 @@ Add-Type -AssemblyName WindowsBase
             </StackPanel>
         </GroupBox>
 
-        <GroupBox Grid.Row="3" Header="Protokoll" MinHeight="120">
+        <GroupBox Grid.Row="4" Header="Protokoll" MinHeight="120">
             <TextBox x:Name="txtLog" IsReadOnly="True" VerticalScrollBarVisibility="Auto"
                      Background="#FFF8FAFC" Foreground="#FF065F46" FontFamily="Consolas"
                      FontSize="12" TextWrapping="Wrap"/>
         </GroupBox>
 
-        <Grid Grid.Row="4" Margin="0,6,0,0">
+        <Grid Grid.Row="5" Margin="0,6,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Button x:Name="btnStart" Grid.Column="0" Content="▶ Ausführen"/>
             <Button x:Name="btnSchliessen" Grid.Column="1" Content="✖ Schließen" Background="#FFDC2626"/>
@@ -304,6 +341,10 @@ $pnlKomponenten  = $Fenster.FindName('pnlKomponenten')
 $Global:txtLog   = $Fenster.FindName('txtLog')
 $btnStart        = $Fenster.FindName('btnStart')
 $btnSchliessen   = $Fenster.FindName('btnSchliessen')
+$grpCloudCreds   = $Fenster.FindName('grpCloudCreds')
+$txtCustomerId   = $Fenster.FindName('txtCustomerId')
+$txtClientId     = $Fenster.FindName('txtClientId')
+$pwdSecret       = $Fenster.FindName('pwdSecret')
 
 $txtPfad.Text = $Global:StandardBackupOrdner
 
@@ -360,6 +401,121 @@ function Select-ComponentsFromBackup {
     }
     catch {
         Write-Log "Fehler beim Auslesen der Backup-Komponenten: $($_.Exception.Message)" 'WARN'
+    }
+}
+
+
+function Get-CustomerInfoPath {
+    <# Standardpfad für CustomerInfo.yml #>
+    return Join-Path $env:USERPROFILE 'Documents\Citrix\AutoConfig\CustomerInfo.yml'
+}
+
+function Test-CustomerInfoValidity {
+    param(
+        [string] $CustomerId,
+        [string] $ClientId,
+        [string] $Secret
+    )
+    
+    $warnings = @()
+    
+    # Customer ID Validierung
+    if ($CustomerId.Length -lt 5) {
+        $warnings += "⚠️ Customer ID ist sehr kurz ($($CustomerId.Length) Zeichen). Sollte mind. eine Kundennummer oder UUID sein."
+    }
+    
+    # Client ID Validierung (sollte UUID sein)
+    if ($ClientId -notmatch '^[a-fA-F0-9\-]{36}$' -and $ClientId.Length -lt 10) {
+        $warnings += "⚠️ Client ID sieht nicht wie eine gültige UUID aus. Format sollte: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+    }
+    
+    # Secret Validierung (sollte länger und Base64-ähnlich sein)
+    if ($Secret.Length -lt 15) {
+        $warnings += "⚠️ Secret ist sehr kurz ($($Secret.Length) Zeichen). Sollte mind. 20+ Zeichen sein (verschlüsselter String)."
+    }
+    
+    if ($warnings.Count -gt 0) {
+        Write-Log "⚠️ WARNUNG: Die eingegebenen Cloud-Anmeldedaten sehen ungültig aus!" 'WARN'
+        foreach ($w in $warnings) {
+            Write-Log $w 'WARN'
+        }
+        Write-Log "⚠️ Bitte überprüfen Sie Ihre Citrix Cloud-Anmeldedaten!" 'WARN'
+        return $false
+    }
+    
+    return $true
+}
+
+function Write-CustomerInfoYml {
+    param(
+        [string] $CustomerId,
+        [string] $ClientId,
+        [string] $Secret
+    )
+    try {
+        # Validierung: Keine Leerzeichen am Anfang/Ende
+        $CustomerId = $CustomerId.Trim()
+        $ClientId   = $ClientId.Trim()
+        $Secret     = $Secret.Trim()
+        
+        if (-not $CustomerId -or -not $ClientId -or -not $Secret) {
+            Write-Log "Cloud-Anmeldedaten unvollständig! Alle Felder sind erforderlich." 'ERROR'
+            return $false
+        }
+        
+        # Verzeichnis erstellen, falls nicht vorhanden
+        $dir = Join-Path $env:USERPROFILE 'Documents\Citrix\AutoConfig'
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Write-Log "Verzeichnis erstellt: $dir" 'INFO'
+        }
+        
+        # YAML-Datei mit vollständiger Struktur schreiben
+        $filePath = Join-Path $dir 'CustomerInfo.yml'
+        $timestamp = Get-Date -Format 'yyyy.MM.dd  HH:mm:ss'
+        
+        $lines = @(
+            '---'
+            "# Created/Updated on $timestamp"
+            '# Be sure to single-quote all strings when manually updating'
+            '# Be sure to include a space between the colon : and the value'
+            "CustomerId: '$CustomerId'"
+            "ClientId: '$ClientId'"
+            "Secret: '$Secret'"
+            '# Environment: Production, ProductionJP, ProductionGov'
+            "Environment: Production"
+            "LogTransactions: True"
+            "Locale: 'de-DE'"
+            "Editor: 'notepad.exe'"
+            "DisplayLog: False"
+            '# OnErrorAction: Continue, Pause, StopCompEnd, StopImmediately'
+            "OnErrorAction: StopCompEnd"
+            "Confirm: False"
+        )
+        $content = $lines -join "`n" + "`n"
+        
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($filePath, $content, $utf8NoBom)
+        
+        Write-Log "CustomerInfo.yml geschrieben: $filePath" 'INFO'
+        Write-Log "✓ Datei enthält alle erforderlichen Felder:" 'INFO'
+        Write-Log "  ✓ CustomerId: $('*' * 8)...$(($CustomerId -replace '^(.{4}).*(.{4})$','$1...$2'))" 'INFO'
+        Write-Log "  ✓ ClientId: $('*' * 8)...$(($ClientId -replace '^(.{4}).*(.{4})$','$1...$2'))" 'INFO'
+        Write-Log "  ✓ Secret: [REDACTED]" 'INFO'
+        Write-Log "  ✓ Environment: Production" 'INFO'
+        
+        # Vergewissern, dass die Datei geschrieben wurde
+        if (-not (Test-Path $filePath)) {
+            Write-Log "FEHLER: CustomerInfo.yml konnte nicht verifiziert werden!" 'ERROR'
+            return $false
+        }
+        
+        Write-Log "✓ CustomerInfo.yml erfolgreich verifiziert" 'INFO'
+        return $true
+    }
+    catch {
+        Write-Log "Fehler beim Schreiben von CustomerInfo.yml: $($_.Exception.Message)" 'ERROR'
+        return $false
     }
 }
 
@@ -468,6 +624,16 @@ $rbRestore.Add_Checked({
     }
 })
 
+$rbOnPrem.Add_Checked({
+    $grpCloudCreds.Visibility = 'Collapsed'
+    Write-Log "Umgebung: OnPrem" 'INFO'
+})
+
+$rbCloud.Add_Checked({
+    $grpCloudCreds.Visibility = 'Visible'
+    Write-Log "Umgebung: Cloud – Bitte Anmeldedaten eingeben" 'INFO'
+})
+
 $btnSelectAll.Add_Click({
     foreach ($chk in $pnlKomponenten.Children) {
         if ($chk -is [System.Windows.Controls.CheckBox]) {
@@ -542,11 +708,31 @@ $btnStart.Add_Click({
         if ([string]::IsNullOrWhiteSpace($basisordner)) { throw "Backup-Ordner erforderlich." }
 
         if ($umgebung -eq 'Cloud') {
-            # Cloud: CustomerInfo.yml-Abfrage erforderlich
-            $customerInfo = Get-ChildItem $env:USERPROFILE -Name 'CustomerInfo.yml' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-            if (-not $customerInfo) { throw "CustomerInfo.yml nicht gefunden im Benutzerverzeichnis." }
+            # Cloud: CustomerInfo.yml aus Eingabefeldern schreiben
+            Write-Log "Cloud-Anmeldedaten werden konfiguriert ..." 'INFO'
+            $customerId = $txtCustomerId.Text.Trim()
+            $clientId   = $txtClientId.Text.Trim()
+            $secret     = $pwdSecret.Password  # PasswordBox hat .Password Property
+            
+            # Validiere Credentials BEVOR sie geschrieben werden
+            if (-not (Test-CustomerInfoValidity -CustomerId $customerId -ClientId $clientId -Secret $secret)) {
+                $result = [System.Windows.MessageBox]::Show(
+                    "Die eingegebenen Anmeldedaten sehen ungültig aus.`n`nTrotzdem fortfahren?`n`n(Überprüfen Sie Ihre Citrix Cloud-Zugangsdaten)",
+                    "Warnung: Ungültige Credentials", 
+                    'YesNo', 
+                    'Warning'
+                )
+                if ($result -ne 'Yes') {
+                    Write-Log "Benutzer hat Abbruch wegen ungültiger Credentials gewählt." 'WARN'
+                    return
+                }
+            }
+            
+            if (-not (Write-CustomerInfoYml -CustomerId $customerId -ClientId $clientId -Secret $secret)) {
+                throw "CustomerInfo.yml konnte nicht geschrieben werden!"
+            }
         }
-
+        
         $komponenten = @()
         if (-not $vollstaendig) {
             # Nur angehakte CheckBoxen auswählen
@@ -574,8 +760,14 @@ $btnStart.Add_Click({
             if ($pNames -contains 'Environment') { $p['Environment'] = $umgebung }
             if ($pNames -contains 'DisplayLog')  { $p['DisplayLog']  = $false }
             if ($umgebung -eq 'Cloud' -and $pNames -contains 'CustomerInfoFileSpec') {
-                $custFile = Get-ChildItem $env:USERPROFILE -Name 'CustomerInfo.yml' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($custFile) { $p['CustomerInfoFileSpec'] = Join-Path $env:USERPROFILE (Split-Path $custFile) }
+                $custInfoPath = Get-CustomerInfoPath
+                if (Test-Path $custInfoPath) {
+                    $p['CustomerInfoFileSpec'] = $custInfoPath
+                    Write-Log "✓ CustomerInfo.yml wird verwendet: $custInfoPath" 'INFO'
+                } else {
+                    Write-Log "⚠️ CustomerInfo.yml nicht gefunden unter: $custInfoPath" 'WARN'
+                    Write-Log "   Bitte füllen Sie die Cloud-Anmeldedaten aus und versuchen es erneut." 'WARN'
+                }
             }
             
             # Komponenten als Switch-Parameter übergeben (nur wenn nicht Vollsicherung)
@@ -653,8 +845,14 @@ $btnStart.Add_Click({
             if ($pNames -contains 'Environment') { $p['Environment'] = $umgebung }
             if ($pNames -contains 'DisplayLog')  { $p['DisplayLog']  = $false }
             if ($umgebung -eq 'Cloud' -and $pNames -contains 'CustomerInfoFileSpec') {
-                $custFile = Get-ChildItem $env:USERPROFILE -Name 'CustomerInfo.yml' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-                if ($custFile) { $p['CustomerInfoFileSpec'] = Join-Path $env:USERPROFILE (Split-Path $custFile) }
+                $custInfoPath = Get-CustomerInfoPath
+                if (Test-Path $custInfoPath) {
+                    $p['CustomerInfoFileSpec'] = $custInfoPath
+                    Write-Log "✓ CustomerInfo.yml wird verwendet: $custInfoPath" 'INFO'
+                } else {
+                    Write-Log "⚠️ CustomerInfo.yml nicht gefunden unter: $custInfoPath" 'WARN'
+                    Write-Log "   Bitte füllen Sie die Cloud-Anmeldedaten aus und versuchen es erneut." 'WARN'
+                }
             }
             
             # Komponenten als Switch-Parameter übergeben (nur wenn nicht Vollsicherung)

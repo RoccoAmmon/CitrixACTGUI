@@ -62,4 +62,4 @@
 - Ausführliches README.md mit Badges, Installation, Bedienung, Komponenten
 - Umfangreiches Wiki (8 Seiten): Home, Installation, Bedienung, Komponenten, Zone-Mapping, Logging, Fehlerbehebung, Changelog
 - .gitignore für PowerShell-Projekte
-- GitHub Release v1.0.0 erstellt
+- GitLab Release v1.0.0 erstellt
